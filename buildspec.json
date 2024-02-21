@@ -33,15 +33,15 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "com.example.obs-plugintemplate"
+            "bundleId": "com.flafflar.obs-webrtc-source"
         }
     },
-    "name": "obs-plugintemplate",
-    "displayName": "OBS Plugin Template",
+    "name": "obs-webrtc-source",
+    "displayName": "OBS WebRTC Source",
     "version": "1.0.0",
-    "author": "Your Name Here",
+    "author": "Achilleas Michailidis",
     "website": "https://example.com",
-    "email": "me@example.com",
+    "email": "achmichail@gmail.com",
     "uuids": {
         "windowsApp": "00000000-0000-0000-0000-000000000000"
     }
