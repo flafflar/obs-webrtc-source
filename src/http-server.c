@@ -29,7 +29,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 struct http_server {
     int socket_fd;
     pthread_t listen_thread;
-    int listen_running;
     char *html;
 };
 
@@ -53,7 +52,7 @@ const char http_header[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
 void* http_server_loop(void *arg) {
     struct http_server *server = arg;
 
-    while (server->listen_running) {
+    while (1) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof(client_address);
 
@@ -114,8 +113,6 @@ struct http_server* http_server_create() {
         return NULL;
     }
 
-    server->listen_running = 1;
-
     return server;
 }
 
@@ -123,8 +120,7 @@ void http_server_destroy(struct http_server **server_ptr) {
     struct http_server *server = *server_ptr;
 
     // Stop the listen thread
-    server->listen_running = 0;
-    pthread_join(server->listen_thread, NULL);
+    pthread_cancel(server->listen_thread);
 
     free(server->html);
     free(server);
