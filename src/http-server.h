@@ -16,30 +16,14 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
-#include <obs-module.h>
-#include <plugin-support.h>
+struct http_server;
 
-#include "http-server.h"
+/**
+ * Creates and starts an HTTP server.
+ */
+struct http_server* http_server_create(void);
 
-OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
-
-extern struct obs_source_info webrtc_source;
-
-static struct http_server *server;
-
-bool obs_module_load(void) {
-
-	obs_register_source(&webrtc_source);
-
-	server = http_server_create();
-
-	obs_log(LOG_INFO, "plugin loaded successfully (version %s)",
-		PLUGIN_VERSION);
-	return true;
-}
-
-void obs_module_unload(void) {
-	http_server_destroy(&server);
-	obs_log(LOG_INFO, "plugin unloaded");
-}
+/**
+ * Stops and destroys the HTTP server.
+ */
+void http_server_destroy(struct http_server **server_ptr);
