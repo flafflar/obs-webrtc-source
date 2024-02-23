@@ -26,6 +26,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include "plugin-support.h"
 
+#define READ_BUFFER_SIZE 4096
+
 struct http_server {
     int socket_fd;
     pthread_t listen_thread;
@@ -37,13 +39,25 @@ char* http_server_read_html() {
 
     FILE *file = fopen(path, "r");
 
-    char buffer[4096];
+    char *data = bmalloc(READ_BUFFER_SIZE * sizeof(char));
+    size_t allocated = READ_BUFFER_SIZE;
+    int len = 0;
+    int chars_read;
+    do {
+        chars_read = fread(
+            data + allocated - READ_BUFFER_SIZE,
+            sizeof(char),
+            READ_BUFFER_SIZE,
+            file
+        );
 
-    int chars_read = fread(buffer, sizeof(char), 4096, file);
+        data = brealloc(data, allocated + READ_BUFFER_SIZE);
+        allocated += READ_BUFFER_SIZE;
 
-    char *str = malloc((chars_read + 1) * sizeof(char));
-    memcpy(str, buffer, chars_read * sizeof(char));
-    str[chars_read + 1] = '\0';
+        len += chars_read;
+    } while (chars_read > 0);
+
+    char *str = bstrdup_n(data, len);
     return str;
 }
 
@@ -122,7 +136,7 @@ void http_server_destroy(struct http_server **server_ptr) {
     // Stop the listen thread
     pthread_cancel(server->listen_thread);
 
-    free(server->html);
+    bfree(server->html);
     free(server);
 
     *server_ptr = NULL;
