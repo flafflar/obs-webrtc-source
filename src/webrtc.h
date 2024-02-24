@@ -15,32 +15,29 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
+#include <stddef.h>
+#include <stdint.h>
 
-#include <obs-module.h>
-#include <plugin-support.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "http-server.h"
-#include "websocket-server.h"
+struct webrtc_connection;
 
-OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
+typedef void (*webrtc_video_callback_t)(uint8_t *buffer, size_t len, void *data);
 
-extern struct obs_source_info webrtc_source;
+struct webrtc_connection_config {
+    uint16_t port;
+    webrtc_video_callback_t video_callback;
+    void *video_callback_data;
+};
 
-static struct http_server *http_server;
+struct webrtc_connection* webrtc_connection_create(
+    struct webrtc_connection_config *config
+);
 
-bool obs_module_load(void) {
+void webrtc_connection_delete(struct webrtc_connection **);
 
-	obs_register_source(&webrtc_source);
-
-	http_server = http_server_create();
-
-	obs_log(LOG_INFO, "plugin loaded successfully (version %s)",
-		PLUGIN_VERSION);
-	return true;
+#ifdef __cplusplus
 }
-
-void obs_module_unload(void) {
-	http_server_destroy(&http_server);
-	obs_log(LOG_INFO, "plugin unloaded");
-}
+#endif

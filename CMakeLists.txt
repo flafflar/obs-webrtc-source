@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16...3.26)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
 
 include(libwebsockets)
+include(libdatachannel)
 
 project(${_name} VERSION ${_version})
 
@@ -37,12 +38,14 @@ if(ENABLE_QT)
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websockets)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE datachannel)
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   src/plugin-main.c
   src/webrtc-source.c
   src/http-server.c
   src/websocket-server.c
+  src/webrtc.cpp
 )
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
