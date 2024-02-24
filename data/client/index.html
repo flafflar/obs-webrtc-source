@@ -1,13 +1,153 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebRTC Stream Client</title>
+    <style>
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+
+            background-color: #191b26;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            background-color: #3c404b;
+        }
+
+        button:hover {
+            background-color: #4f535e;
+        }
+
+        button:active {
+            background-color: #191b26;
+        }
+
+        .full {
+            width: 100%;
+            height: 100%;
+        }
+
+        .center {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+
+            border: 6px solid #3c404b;
+            border-top-color: #4f535e;
+            border-radius: 50%;
+
+            animation: spinner-spin 1s ease-in-out 0s infinite;
+        }
+
+        @keyframes spinner-spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="full center" id="button-container">
+        <button id="start-streaming">Start streaming</button>
+    </div>
+    <div class="full center hidden" id="spinner-container">
+        <div class="spinner"></div>
+    </div>
+    <div class="full center hidden" id="video-container">
+        <video id="video" class="full" autoplay></video>
+    </div>
     <script>
+        const buttonContainer = document.getElementById("button-container");
+        const startStreamButton = document.getElementById("start-streaming");
+
+        const spinnerContainer = document.getElementById("spinner-container");
+
+        const videoContainer = document.getElementById("video-container");
+        /** @type {HTMLVideoElement} */
+        const video = document.getElementById("video");
+
+        startStreamButton.addEventListener("click", (event) => {
+            navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: false,
+            }).then((stream) => {
+                startStream(stream);
+            })
+        })
+
+        const socket = new WebSocket(`ws://${location.hostname}:3081`);
+
+        socket.addEventListener("message", (event) => {
+            handleOffer(event.data);
+        })
+
+        const peerConnection = new RTCPeerConnection();
+
+        peerConnection.addEventListener("connectionstatechange", (event) => {
+            if (peerConnection.connectionState == "connected") {
+                console.info("Connected");
+                spinnerContainer.classList.add("hidden");
+                videoContainer.classList.remove("hidden");
+            }
+        })
+
+        /**
+         * @param stream {MediaStream}
+         */
+        function startStream(stream) {
+            console.info("Starting stream");
+            video.srcObject = stream;
+
+            for (let track of stream.getVideoTracks()) {
+                peerConnection.addTrack(track);
+            }
+
+            buttonContainer.classList.add("hidden");
+            spinnerContainer.classList.remove("hidden");
+
+            console.info("Sending offer request to server");
+            socket.send("ready");
+        }
+
+        /**
+         * @param sdp {string}
+         */
+        function handleOffer(sdp) {
+            console.info("Received offer");
+            const offer = new RTCSessionDescription({
+                type: "offer",
+                sdp: sdp,
+            });
+
+            peerConnection.setRemoteDescription(offer).then(() => {
+                peerConnection.createAnswer().then((description) => {
+                    peerConnection.setLocalDescription(description);
+                    console.info("Sending answer");
+                    socket.send(description.sdp);
+                })
+            })
+        }
     </script>
 </body>
 </html>
