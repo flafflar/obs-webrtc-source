@@ -46,6 +46,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   src/http-server.c
   src/websocket-server.c
   src/webrtc.cpp
+  src/rtp-parser.c
 )
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

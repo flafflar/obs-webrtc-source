@@ -21,6 +21,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "plugin-support.h"
 
 #include "webrtc.h"
+#include "rtp-parser.h"
 
 struct webrtc_source {
     obs_source_t *source;
@@ -32,6 +33,10 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
     struct webrtc_source *src = data;
     UNUSED_PARAMETER(buffer);
     UNUSED_PARAMETER(len);
+
+    struct rtp_packet *packet = rtp_packet_parse(buffer, len);
+    rtp_packet_debug_print(packet);
+    rtp_packet_free(packet);
 
     uint32_t pixels[400 * 300];
 
