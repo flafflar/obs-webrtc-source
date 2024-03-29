@@ -20,22 +20,19 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <stddef.h>
 #include <stdint.h>
 
-struct rtp_packet {
-    uint8_t version;
-    uint8_t payload_type;
-    uint16_t sequence_number;
-    uint8_t marker;
-    uint32_t timestamp;
-    uint32_t ssrc;
-    uint32_t *csrc;
-    uint8_t csrc_count;
+#include <libavcodec/avcodec.h>
 
-    uint8_t *payload;
-    size_t payload_size;
-};
+#include "rtp-parser.h"
 
-void rtp_packet_free(struct rtp_packet *packet);
+struct h264_decoder;
 
-void rtp_packet_debug_print(struct rtp_packet *packet);
+struct h264_decoder* h264_decoder_create();
 
-struct rtp_packet* rtp_packet_parse(uint8_t *data, size_t len);
+void h264_decoder_destroy(struct h264_decoder **decoder);
+
+void rtp_process_h264_packet(
+    struct h264_decoder *decoder,
+    struct rtp_packet *packet
+);
+
+AVFrame* h264_decoder_get_frame(struct h264_decoder *decoder);

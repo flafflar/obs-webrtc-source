@@ -22,32 +22,58 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "webrtc.h"
 #include "rtp-parser.h"
+#include "h264-decoder.h"
 
 struct webrtc_source {
     obs_source_t *source;
     struct webrtc_connection *webrtc_conn;
+    struct h264_decoder *decoder;
 };
 
 void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
-    obs_log(LOG_INFO, "Received video callback");
     struct webrtc_source *src = data;
-    UNUSED_PARAMETER(buffer);
-    UNUSED_PARAMETER(len);
 
     struct rtp_packet *packet = rtp_packet_parse(buffer, len);
-    rtp_packet_debug_print(packet);
-    rtp_packet_free(packet);
+
+    rtp_process_h264_packet(src->decoder, packet);
+
+    AVFrame *f = h264_decoder_get_frame(src->decoder);
+    if (!f) return;
 
     uint32_t pixels[400 * 300];
 
-    struct obs_source_frame frame = {
-        .data = {[0] = (uint8_t *) pixels },
-        .linesize = {[0] = 400 * 4},
-        .width = 400,
-        .height = 300,
-        .format = VIDEO_FORMAT_BGRX,
-        .timestamp = os_gettime_ns(),
-    };
+    struct obs_source_frame frame;
+    obs_source_frame_init(&frame, VIDEO_FORMAT_I420, f->width, f->height);
+
+    video_format_get_parameters_for_format(
+        VIDEO_CS_DEFAULT,
+        VIDEO_RANGE_DEFAULT,
+        VIDEO_FORMAT_I420,
+        frame.color_matrix,
+        frame.color_range_min,
+        frame.color_range_max
+    );
+
+    for (int line = 0; line < f->height; line++) {
+        memcpy(
+		frame.data[0] + line*f->linesize[0],
+		f->data[0] + line*f->linesize[0],
+		f->linesize[0]
+	);
+    }
+
+    for (int line = 0; line < f->height / 2; line++) {
+        memcpy(
+                frame.data[1] + line*f->linesize[1],
+                f->data[1] + line*f->linesize[1],
+                f->linesize[1]
+	);
+        memcpy(
+                frame.data[2] + line*f->linesize[2],
+                f->data[2] + line*f->linesize[2],
+                f->linesize[2]
+	);
+    }
 
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 400; x++) {
@@ -56,6 +82,7 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
     }
 
     obs_source_output_video(src->source, &frame);
+    rtp_packet_free(packet);
 }
 
 void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
@@ -72,6 +99,8 @@ void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
 
     src->webrtc_conn = webrtc_connection_create(&webrtc_conf);
 
+    src->decoder = h264_decoder_create();
+
     return src;
 }
 
@@ -79,6 +108,8 @@ void webrtc_source_destroy(void *data) {
     struct webrtc_source *src = data;
 
     webrtc_connection_delete(&src->webrtc_conn);
+
+    h264_decoder_destroy(&src->decoder);
 
     bfree(src);
 }
