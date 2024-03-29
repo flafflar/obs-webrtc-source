@@ -20,12 +20,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <util/platform.h>
 #include "plugin-support.h"
 
+#include "http-server.h"
 #include "webrtc.h"
 #include "rtp-parser.h"
 #include "h264-decoder.h"
 
 struct webrtc_source {
     obs_source_t *source;
+    struct http_server *http_server;
     struct webrtc_connection *webrtc_conn;
     struct h264_decoder *decoder;
 };
@@ -91,6 +93,8 @@ void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
     struct webrtc_source *src = bzalloc(sizeof(struct webrtc_source));
     src->source = source;
 
+    src->http_server = http_server_create();
+
     struct webrtc_connection_config webrtc_conf = {
         .port = 3081,
         .video_callback = webrtc_video_callback,
@@ -106,6 +110,8 @@ void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
 
 void webrtc_source_destroy(void *data) {
     struct webrtc_source *src = data;
+
+    http_server_destroy(&src->http_server);
 
     webrtc_connection_delete(&src->webrtc_conn);
 

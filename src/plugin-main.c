@@ -19,7 +19,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <plugin-support.h>
 
-#include "http-server.h"
 #include "websocket-server.h"
 
 OBS_DECLARE_MODULE()
@@ -27,13 +26,9 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 extern struct obs_source_info webrtc_source;
 
-static struct http_server *http_server;
-
 bool obs_module_load(void) {
 
 	obs_register_source(&webrtc_source);
-
-	http_server = http_server_create();
 
 	obs_log(LOG_INFO, "plugin loaded successfully (version %s)",
 		PLUGIN_VERSION);
@@ -41,6 +36,5 @@ bool obs_module_load(void) {
 }
 
 void obs_module_unload(void) {
-	http_server_destroy(&http_server);
 	obs_log(LOG_INFO, "plugin unloaded");
 }
