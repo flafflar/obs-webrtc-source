@@ -42,8 +42,6 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
     AVFrame *f = h264_decoder_get_frame(src->decoder);
     if (!f) return;
 
-    uint32_t pixels[400 * 300];
-
     struct obs_source_frame frame;
     obs_source_frame_init(&frame, VIDEO_FORMAT_I420, f->width, f->height);
 
@@ -75,12 +73,6 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
                 f->data[2] + line*f->linesize[2],
                 f->linesize[2]
 	);
-    }
-
-    for (int y = 0; y < 300; y++) {
-        for (int x = 0; x < 400; x++) {
-            pixels[y + x * 300] = 0xff00ff00;
-        }
     }
 
     obs_source_output_video(src->source, &frame);
