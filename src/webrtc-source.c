@@ -56,23 +56,23 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
 
     for (int line = 0; line < f->height; line++) {
         memcpy(
-		frame.data[0] + line*f->linesize[0],
-		f->data[0] + line*f->linesize[0],
-		f->linesize[0]
-	);
+            frame.data[0] + line*f->linesize[0],
+            f->data[0] + line*f->linesize[0],
+            f->linesize[0]
+        );
     }
 
     for (int line = 0; line < f->height / 2; line++) {
         memcpy(
-                frame.data[1] + line*f->linesize[1],
-                f->data[1] + line*f->linesize[1],
-                f->linesize[1]
-	);
+            frame.data[1] + line*f->linesize[1],
+            f->data[1] + line*f->linesize[1],
+            f->linesize[1]
+	    );
         memcpy(
-                frame.data[2] + line*f->linesize[2],
-                f->data[2] + line*f->linesize[2],
-                f->linesize[2]
-	);
+            frame.data[2] + line*f->linesize[2],
+            f->data[2] + line*f->linesize[2],
+            f->linesize[2]
+        );
     }
 
     obs_source_output_video(src->source, &frame);
