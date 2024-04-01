@@ -42,8 +42,21 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
     AVFrame *f = h264_decoder_get_frame(src->decoder);
     if (!f) return;
 
-    struct obs_source_frame frame;
-    obs_source_frame_init(&frame, VIDEO_FORMAT_I420, f->width, f->height);
+    struct obs_source_frame frame = {
+        .data = {
+            [0] = f->data[0],
+            [1] = f->data[1],
+            [2] = f->data[2],
+        },
+        .linesize = {
+            [0] = f->linesize[0],
+            [1] = f->linesize[1],
+            [2] = f->linesize[2],
+        },
+        .width = f->width,
+        .height = f->height,
+        .format = VIDEO_FORMAT_I420,
+    };
 
     video_format_get_parameters_for_format(
         VIDEO_CS_DEFAULT,
@@ -54,28 +67,9 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
         frame.color_range_max
     );
 
-    for (int line = 0; line < f->height; line++) {
-        memcpy(
-            frame.data[0] + line*f->linesize[0],
-            f->data[0] + line*f->linesize[0],
-            f->linesize[0]
-        );
-    }
-
-    for (int line = 0; line < f->height / 2; line++) {
-        memcpy(
-            frame.data[1] + line*f->linesize[1],
-            f->data[1] + line*f->linesize[1],
-            f->linesize[1]
-	    );
-        memcpy(
-            frame.data[2] + line*f->linesize[2],
-            f->data[2] + line*f->linesize[2],
-            f->linesize[2]
-        );
-    }
-
     obs_source_output_video(src->source, &frame);
+
+    av_frame_free(&f);
     rtp_packet_free(packet);
 }
 
