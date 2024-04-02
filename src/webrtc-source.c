@@ -27,6 +27,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 struct webrtc_source {
     obs_source_t *source;
+    obs_data_t *settings;
     struct http_server *http_server;
     struct webrtc_connection *webrtc_conn;
     struct h264_decoder *decoder;
@@ -79,22 +80,116 @@ void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
 
     struct webrtc_source *src = bzalloc(sizeof(struct webrtc_source));
     src->source = source;
-
-    int http_server_port = obs_data_get_int(settings, "http_server_port");
-    src->http_server = http_server_create(http_server_port);
-
-    int ws_server_port = obs_data_get_int(settings, "websocket_server_port");
-    struct webrtc_connection_config webrtc_conf = {
-        .port = ws_server_port,
-        .video_callback = webrtc_video_callback,
-        .video_callback_data = src,
-    };
-
-    src->webrtc_conn = webrtc_connection_create(&webrtc_conf);
+    src->settings = settings;
 
     src->decoder = h264_decoder_create();
 
     return src;
+}
+
+static void webrtc_source_stop_http_server(struct webrtc_source *src) {
+    if (src->http_server) {
+        obs_log(LOG_INFO, "Stopping HTTP server");
+        http_server_destroy(&src->http_server);
+    }
+}
+
+static void webrtc_source_stop_ws_server(struct webrtc_source *src) {
+    if (src->webrtc_conn) {
+        obs_log(LOG_INFO, "Stopping WebSocket server");
+        webrtc_connection_delete(&src->webrtc_conn);
+    }
+}
+
+static bool webrtc_source_start_http_server(
+    struct webrtc_source *src,
+    int port
+) {
+    if (src->http_server) {
+        webrtc_source_stop_http_server(src);
+    }
+
+    obs_log(LOG_INFO, "Starting HTTP server");
+    src->http_server = http_server_create(port);
+
+    if (!src->http_server) {
+        obs_log(LOG_ERROR, "HTTP server could not be created");
+        return false;
+    }
+
+    return true;
+}
+
+static bool webrtc_source_start_ws_server(struct webrtc_source *src, int port) {
+    if (src->webrtc_conn) {
+        webrtc_connection_delete(&src->webrtc_conn);
+    }
+
+    obs_log(LOG_INFO, "Starting WebSocket server");
+    struct webrtc_connection_config webrtc_conf = {
+        .port = port,
+        .video_callback = webrtc_video_callback,
+        .video_callback_data = src,
+    };
+    src->webrtc_conn = webrtc_connection_create(&webrtc_conf);
+
+    if (!src->webrtc_conn) {
+        obs_log(LOG_ERROR, "WebSocket server could not be started");
+        return false;
+    }
+
+    return true;
+}
+
+bool webrtc_source_start_servers(
+    obs_properties_t *props,
+    obs_property_t *property,
+    void *data
+) {
+    struct webrtc_source *src = data;
+
+    int http_port = obs_data_get_int(src->settings, "http_server_port");
+    if (!webrtc_source_start_http_server(src, http_port)) {
+        return false;
+    }
+
+    int ws_port = obs_data_get_int(src->settings, "websocket_server_port");
+    if (!webrtc_source_start_ws_server(src, ws_port)) {
+        webrtc_source_stop_http_server(src);
+        return false;
+    }
+
+    // Hide the "Start Servers" button
+    obs_property_set_visible(property, false);
+    // Show the "Stop Servers" button
+    obs_property_set_visible(
+        obs_properties_get(props, "stop_servers_button"),
+        true
+    );
+
+    return true;
+}
+
+bool webrtc_source_stop_servers(
+    obs_properties_t *props,
+    obs_property_t *property,
+    void *data
+) {
+    struct webrtc_source *src = data;
+
+    webrtc_source_stop_http_server(src);
+
+    webrtc_source_stop_ws_server(src);
+
+    // Hide the "Stop Servers" button
+    obs_property_set_visible(property, false);
+    // Show the "Start Servers" button
+    obs_property_set_visible(
+        obs_properties_get(props, "start_servers_button"),
+        true
+    );
+
+    return true;
 }
 
 obs_properties_t* webrtc_source_get_properties(void *data) {
@@ -115,15 +210,37 @@ obs_properties_t* webrtc_source_get_properties(void *data) {
         1024, 65535, 1
     );
 
+    obs_property_t *start_servers_button = obs_properties_add_button2(props,
+        "start_servers_button",
+        "Start servers",
+        webrtc_source_start_servers,
+        src
+    );
+
+    obs_property_t *stop_servers_button = obs_properties_add_button2(props,
+        "stop_servers_button",
+        "Stop servers",
+        webrtc_source_stop_servers,
+        src
+    );
+
+    if (src->http_server) {
+        obs_property_set_visible(start_servers_button, false);
+        obs_property_set_visible(stop_servers_button, true);
+    } else {
+        obs_property_set_visible(start_servers_button, true);
+        obs_property_set_visible(stop_servers_button, false);
+    }
+
     return props;
 }
 
 void webrtc_source_destroy(void *data) {
     struct webrtc_source *src = data;
 
-    http_server_destroy(&src->http_server);
+    webrtc_source_stop_http_server(src);
 
-    webrtc_connection_delete(&src->webrtc_conn);
+    webrtc_source_stop_ws_server(src);
 
     h264_decoder_destroy(&src->decoder);
 
