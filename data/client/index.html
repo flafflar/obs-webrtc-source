@@ -87,53 +87,104 @@
         /** @type {HTMLVideoElement} */
         const video = document.getElementById("video");
 
+        /** @type {MediaStream} */
+        let stream = undefined;
+
         startStreamButton.addEventListener("click", (event) => {
             navigator.mediaDevices.getDisplayMedia({
                 video: true,
                 audio: false,
-            }).then((stream) => {
-                startStream(stream);
+            }).then((s) => {
+                stream = s;
+                startStream();
             })
         })
 
-        const socket = new WebSocket(`ws://${location.hostname}:3081`);
-
-        socket.addEventListener("message", (event) => {
-            handleOffer(event.data);
-        })
-
-        const peerConnection = new RTCPeerConnection();
-
-        peerConnection.addEventListener("connectionstatechange", (event) => {
-            if (peerConnection.connectionState == "connected") {
-                console.info("Connected");
-                spinnerContainer.classList.add("hidden");
-                videoContainer.classList.remove("hidden");
+        /**
+         * @return {Promise<WebSocket>}
+         */
+        function getSocket() {
+            function tryToConnect() {
+                let socket = new WebSocket(`ws://${location.hostname}:3081`);
+                if (socket.readyState == WebSocket.CLOSED) {
+                    return false;
+                } else {
+                    return socket;
+                }
             }
-        })
+
+            return new Promise((res, rej) => {
+                setTimeout(function retry() {
+                    let socket = tryToConnect();
+                    if (!socket) {
+                        setTimeout(retry, 0);
+                    } else {
+                        res(socket);
+                    }
+                }, 0);
+            })
+        }
+
+        /** @type {RTCPeerConnection} */
+        let peerConnection = undefined;
 
         /**
          * @param stream {MediaStream}
          */
-        function startStream(stream) {
+        function startStream() {
             console.info("Starting stream");
             video.srcObject = stream;
+
+            peerConnection = new RTCPeerConnection();
+            peerConnection.addEventListener("connectionstatechange", (event) => {
+                if (peerConnection.connectionState == "connected") {
+                    console.info("Connected");
+                    spinnerContainer.classList.add("hidden");
+                    videoContainer.classList.remove("hidden");
+                }
+            })
 
             for (let track of stream.getVideoTracks()) {
                 peerConnection.addTrack(track);
             }
 
+            connectToServer();
+        }
+
+        function connectToServer() {
+            console.info("Connecting to server");
             buttonContainer.classList.add("hidden");
             spinnerContainer.classList.remove("hidden");
 
-            console.info("Sending offer request to server");
-            socket.send("ready");
+            getSocket().then(socket => {
+
+                socket.addEventListener("open", (event) => {
+                    console.info("Sending offer request to server");
+                    socket.send("ready");
+                })
+
+                socket.addEventListener("message", (event) => {
+                    handleOffer(socket, event.data);
+                })
+
+                socket.addEventListener("close", (event) => {
+                    console.info("Socket closed");
+                    videoContainer.classList.add("hidden");
+                    spinnerContainer.classList.remove("hidden");
+
+                    // Try to reconnect immediately
+                    // connectToServer();
+                    startStream();
+                });
+
+            })
         }
 
         /**
+         * @param socket {WebSocket}
          * @param sdp {string}
          */
-        function handleOffer(sdp) {
+        function handleOffer(socket, sdp) {
             console.info("Received offer");
             const offer = new RTCSessionDescription({
                 type: "offer",
