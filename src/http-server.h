@@ -20,8 +20,10 @@ struct http_server;
 
 /**
  * Creates and starts an HTTP server.
+ *
+ * @param port The port to listen on.
  */
-struct http_server* http_server_create(void);
+struct http_server* http_server_create(int port);
 
 /**
  * Stops and destroys the HTTP server.

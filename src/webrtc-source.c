@@ -74,15 +74,18 @@ void webrtc_video_callback(uint8_t *buffer, size_t len, void *data) {
 }
 
 void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
-    UNUSED_PARAMETER(settings);
+    obs_data_set_default_int(settings, "http_server_port", 3080);
+    obs_data_set_default_int(settings, "websocket_server_port", 3081);
 
     struct webrtc_source *src = bzalloc(sizeof(struct webrtc_source));
     src->source = source;
 
-    src->http_server = http_server_create();
+    int http_server_port = obs_data_get_int(settings, "http_server_port");
+    src->http_server = http_server_create(http_server_port);
 
+    int ws_server_port = obs_data_get_int(settings, "websocket_server_port");
     struct webrtc_connection_config webrtc_conf = {
-        .port = 3081,
+        .port = ws_server_port,
         .video_callback = webrtc_video_callback,
         .video_callback_data = src,
     };
@@ -92,6 +95,27 @@ void* webrtc_source_create(obs_data_t *settings, obs_source_t *source) {
     src->decoder = h264_decoder_create();
 
     return src;
+}
+
+obs_properties_t* webrtc_source_get_properties(void *data) {
+    struct webrtc_source *src = data;
+    UNUSED_PARAMETER(src);
+
+    obs_properties_t *props = obs_properties_create();
+
+    obs_properties_add_int(props,
+        "http_server_port",
+        "HTTP server port",
+        1024, 65535, 1
+    );
+
+    obs_properties_add_int(props,
+        "websocket_server_port",
+        "WebSocket server port",
+        1024, 65535, 1
+    );
+
+    return props;
 }
 
 void webrtc_source_destroy(void *data) {
@@ -131,6 +155,7 @@ struct obs_source_info webrtc_source = {
     .type = OBS_SOURCE_TYPE_INPUT,
     .output_flags = OBS_SOURCE_ASYNC_VIDEO,
     .get_name = webrtc_source_name,
+    .get_properties = webrtc_source_get_properties,
     .create = webrtc_source_create,
     .destroy = webrtc_source_destroy,
 };

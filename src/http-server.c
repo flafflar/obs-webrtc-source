@@ -89,7 +89,7 @@ void* http_server_loop(void *arg) {
     return NULL;
 }
 
-struct http_server* http_server_create() {
+struct http_server* http_server_create(int port) {
     struct http_server *server = malloc(sizeof(struct http_server));
 
     server->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -101,7 +101,7 @@ struct http_server* http_server_create() {
     struct sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(3080);
+    address.sin_port = htons(port);
 
     if (bind(server->socket_fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
         obs_log(LOG_ERROR, "bind failed: %s", strerror(errno));
