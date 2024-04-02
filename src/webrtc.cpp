@@ -159,7 +159,12 @@ struct webrtc_connection *webrtc_connection_create(
 ) {
     rtc::InitLogger(rtc::LogLevel::Debug, webrtc_log_callback);
 
-    WebRTCConnection *connection = new WebRTCConnection(config->port);
+    WebRTCConnection *connection;
+    try {
+        connection = new WebRTCConnection(config->port);
+    } catch (std::runtime_error e) {
+        return NULL;
+    };
 
     connection->videoCallback = config->video_callback;
     connection->videoCallbackData = config->video_callback_data;
