@@ -147,16 +147,37 @@ bool webrtc_source_start_servers(
     void *data
 ) {
     struct webrtc_source *src = data;
+    char error_desc[1024];
+
+    obs_property_t *error_text = obs_properties_get(props, "error_text");
+    obs_property_set_visible(error_text, false);
 
     int http_port = obs_data_get_int(src->settings, "http_server_port");
     if (!webrtc_source_start_http_server(src, http_port)) {
-        return false;
+        snprintf(
+            error_desc, 1024,
+            "Error while starting HTTP server: %s", strerror(errno)
+        );
+
+        obs_property_set_description(error_text, error_desc);
+        obs_property_text_set_info_type(error_text, OBS_TEXT_INFO_ERROR);
+        obs_property_set_visible(error_text, true);
+        return true;
     }
 
     int ws_port = obs_data_get_int(src->settings, "websocket_server_port");
     if (!webrtc_source_start_ws_server(src, ws_port)) {
         webrtc_source_stop_http_server(src);
-        return false;
+
+        snprintf(
+            error_desc, 1024,
+            "Error while starting WebSocket server: %s", strerror(errno)
+        );
+
+        obs_property_set_description(error_text, error_desc);
+        obs_property_text_set_info_type(error_text, OBS_TEXT_INFO_ERROR);
+        obs_property_set_visible(error_text, true);
+        return true;
     }
 
     // Hide the "Start Servers" button
@@ -231,6 +252,13 @@ obs_properties_t* webrtc_source_get_properties(void *data) {
         obs_property_set_visible(start_servers_button, true);
         obs_property_set_visible(stop_servers_button, false);
     }
+
+    obs_property_t *error_text = obs_properties_add_text(props,
+        "error_text",
+        "",
+        OBS_TEXT_INFO
+    );
+    obs_property_set_visible(error_text, false);
 
     return props;
 }
