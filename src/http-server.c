@@ -103,6 +103,9 @@ struct http_server* http_server_create(int port) {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
 
+    setsockopt(server->socket_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    setsockopt(server->socket_fd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int));
+
     if (bind(server->socket_fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
         obs_log(LOG_ERROR, "bind failed: %s", strerror(errno));
         return NULL;
