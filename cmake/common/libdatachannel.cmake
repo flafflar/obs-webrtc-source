@@ -16,3 +16,5 @@ set(NO_EXAMPLES ON)
 
 message(STATUS "Donwloading libdatachannel")
 FetchContent_MakeAvailable(libdatachannel_project)
+
+target_compile_options(datachannel PUBLIC -Wno-shadow -Wno-error=shadow)
