@@ -81,7 +81,7 @@ void* http_server_loop(void *arg) {
             continue;
         }
 
-        send(client_fd, http_header, sizeof(http_header)/sizeof(char), 0);
+        send(client_fd, http_header, (sizeof(http_header) - 1)/sizeof(char), 0);
         send(client_fd, server->html, strlen(server->html)*sizeof(char), 0);
         shutdown(client_fd, SHUT_RDWR);
     }
