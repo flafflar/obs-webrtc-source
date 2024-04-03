@@ -100,12 +100,18 @@
             })
         })
 
+        async function getSocketPort() {
+            let req = await fetch("/ws-port");
+            return await req.text();
+        }
+
         /**
          * @return {Promise<WebSocket>}
          */
         function getSocket() {
-            function tryToConnect() {
-                let socket = new WebSocket(`ws://${location.hostname}:3081`);
+            async function tryToConnect() {
+                let port = await getSocketPort();
+                let socket = new WebSocket(`ws://${location.hostname}:${port}`);
                 if (socket.readyState == WebSocket.CLOSED) {
                     return false;
                 } else {

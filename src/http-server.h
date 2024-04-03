@@ -29,3 +29,9 @@ struct http_server* http_server_create(int port);
  * Stops and destroys the HTTP server.
  */
 void http_server_destroy(struct http_server **server_ptr);
+
+/**
+ * Set the port that the WebSocket server listens on, so it gets sent to the
+ * clients.
+ */
+void http_server_set_ws_port(struct http_server *server, int port);

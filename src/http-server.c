@@ -32,6 +32,7 @@ struct http_server {
     int socket_fd;
     pthread_t listen_thread;
     char *html;
+    char *ws_port;
 };
 
 char* http_server_read_html() {
@@ -61,6 +62,28 @@ char* http_server_read_html() {
     return str;
 }
 
+static void get_path(char *header, int len, char *path) {
+    int pathstart = -1;
+    int pathlen = 0;
+    for (int i = 0; i < len; i++) {
+        if (header[i] == ' ') {
+            if (pathstart == -1) {
+                pathstart = i + 1;
+                continue;
+            } else {
+                pathlen = pathstart - i + 1;
+                break;
+            }
+        }
+
+        if (pathstart != -1) {
+            path[i - pathstart] = header[i];
+        }
+    }
+
+    path[pathlen] = '\0';
+}
+
 const char http_header[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
 
 void* http_server_loop(void *arg) {
@@ -81,8 +104,22 @@ void* http_server_loop(void *arg) {
             continue;
         }
 
+        char header[1024];
+        int bytes_recvd = recv(client_fd, header, 1024, 0);
+        if (bytes_recvd < 0) {
+            obs_log(LOG_ERROR, "recv failed: %s", strerror(errno));
+        }
+
+        char path[1024];
+        get_path(header, bytes_recvd, path);
+
         send(client_fd, http_header, (sizeof(http_header) - 1)/sizeof(char), 0);
-        send(client_fd, server->html, strlen(server->html)*sizeof(char), 0);
+        if (strcmp(path, "/ws-port") == 0) {
+            send(client_fd, server->ws_port, strlen(server->ws_port)*sizeof(char), 0);
+        } else {
+            send(client_fd, server->html, strlen(server->html)*sizeof(char), 0);
+        }
+
         shutdown(client_fd, SHUT_RDWR);
     }
 
@@ -118,6 +155,8 @@ struct http_server* http_server_create(int port) {
 
     server->html = http_server_read_html();
 
+    server->ws_port = "-1";
+
     int result = pthread_create(
         &server->listen_thread,
         NULL,
@@ -143,4 +182,9 @@ void http_server_destroy(struct http_server **server_ptr) {
     free(server);
 
     *server_ptr = NULL;
+}
+
+void http_server_set_ws_port(struct http_server *server, int port) {
+    server->ws_port = malloc(6 * sizeof(char));
+    snprintf(server->ws_port, 6, "%d", port);
 }

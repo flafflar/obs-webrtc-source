@@ -138,6 +138,8 @@ static bool webrtc_source_start_ws_server(struct webrtc_source *src, int port) {
         return false;
     }
 
+    http_server_set_ws_port(src->http_server, port);
+
     return true;
 }
 
