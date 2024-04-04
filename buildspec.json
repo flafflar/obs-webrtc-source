@@ -38,9 +38,9 @@
     },
     "name": "obs-webrtc-source",
     "displayName": "OBS WebRTC Source",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "author": "Achilleas Michailidis",
-    "website": "https://example.com",
+    "website": "",
     "email": "achmichail@gmail.com",
     "uuids": {
         "windowsApp": "00000000-0000-0000-0000-000000000000"
