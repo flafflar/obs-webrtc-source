@@ -7,9 +7,11 @@
 !/cmake
 !/data
 !/src
+!/third-party
 !.clang-format
 !.cmake-format.json
 !.gitignore
+!.gitmodules
 !buildspec.json
 !CMakeLists.txt
 !CMakePresets.json

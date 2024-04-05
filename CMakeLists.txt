@@ -45,6 +45,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   src/webrtc.cpp
   src/rtp-parser.c
   src/h264-decoder.c
+  third-party/mongoose/mongoose.c
 )
+
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE third-party/mongoose)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
