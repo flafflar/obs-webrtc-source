@@ -50,4 +50,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE third-party/mongoose)
 
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -DMG_TLS=MG_TLS_OPENSSL)
+
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
